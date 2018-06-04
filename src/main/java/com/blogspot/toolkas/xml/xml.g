@@ -1,20 +1,15 @@
-xml: entity;
+xml: document;
 
-entity:
-    start_tag body end_tag
-    short_tag;
+document: element;
 
-start_tag:
-    '<' WORD '>';
+element:
+    '<' NAME attribute* '>' content '<' '/' NAME '>'
+    '<' NAME attribute* '/' '>';
 
-end_tag:
-    '<' '/' WORD '>'
-    ;
-
-body:
-     entity*
-     DATA
+content:
+     element*
+     TEXT
      ;
 
-short_tag:
-    '<' WORD '/' >'
+attribute:
+    name '=' STRING;

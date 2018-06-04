@@ -16,4 +16,12 @@ public class Lexem {
     public String getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return "Lexem{" +
+                "token=" + token +
+                ", value='" + value + '\'' +
+                '}';
+    }
 }

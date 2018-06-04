@@ -33,7 +33,7 @@ public class XmlLexer {
             }
         }
 
-        if (value == null || value.trim().length() == 0) {
+        if (value != null && value.trim().length() > 0) {
             throw new TokenizeException("can't parse '" + value + "'");
         }
 
@@ -48,29 +48,69 @@ public class XmlLexer {
         switch (state) {
             case DEFAULT:
                 if (ch == '<') {
-                    state = TokenizeState.START;
-                    position -= 1;
-                } else if (ch == '/') {
-                    state = TokenizeState.SLASH;
-                    position -= 1;
-                } else if (ch == '>') {
-                    state = TokenizeState.END;
-                    position -= 1;
+                    state = TokenizeState.ELEMENT;
+                    return new Lexem(Token.LT, "<");
                 } else if (Character.isWhitespace(ch)) {
                     return null;
                 } else {
-                    throw new TokenizeException(
-                            "unexpected character '" + ch +
-                                    "' in state " + state
-                    );
+                    state = TokenizeState.TEXT;
+                    value += ch;
                 }
                 break;
-            case START:
-                return createToken(Token.START, false);
-            case END:
-                return createToken(Token.END, false);
-            case SLASH:
-                return createToken(Token.SLASH, false);
+            case TEXT:
+                if (ch == '<') {
+                    state = TokenizeState.DEFAULT;
+                    position -= 1;
+
+                    try {
+                        return new Lexem(Token.TEXT, value);
+                    } finally {
+                        value = "";
+                    }
+                }
+                value += ch;
+                break;
+            case ELEMENT:
+                if (ch == '"') {
+                    state = TokenizeState.STRING;
+                } else if (ch == '=') {
+                    return new Lexem(Token.EQ, "=");
+                } else if (ch == '/') {
+                    return new Lexem(Token.SLASH, "/");
+                } else if (ch == '>') {
+                    state = TokenizeState.DEFAULT;
+                    return new Lexem(Token.GT, ">");
+                } else if (Character.isWhitespace(ch)) {
+                    return null;
+                } else if (Character.isAlphabetic(ch)) {
+                    state = TokenizeState.NAME;
+                    value += ch;
+                }
+                break;
+            case STRING:
+                if (ch == '"') {
+                    state = TokenizeState.ELEMENT;
+                    try {
+                        return new Lexem(Token.STRING, value);
+                    } finally {
+                        value = "";
+                    }
+                }
+                value += ch;
+                break;
+            case NAME:
+                if (Character.isAlphabetic(ch) || Character.isDigit(ch) || ch == '_' || ch == '-' || ch == ':') {
+                    value += ch;
+                } else {
+                    state = TokenizeState.ELEMENT;
+                    position -= 1;
+                    try {
+                        return new Lexem(Token.NAME, value);
+                    } finally {
+                        value = "";
+                    }
+                }
+
         }
         return null;
     }
@@ -81,18 +121,7 @@ public class XmlLexer {
                 expression.charAt(position) : -1;
     }
 
-    private Lexem createToken(Token token, boolean back) {
-        Lexem lexem = new Lexem(token, value);
-        value = "";
-
-        state = TokenizeState.DEFAULT;
-        if (back) {
-            position -= 1;
-        }
-        return lexem;
-    }
-
     private enum TokenizeState {
-        DEFAULT, START, END, SLASH;
+        DEFAULT, ELEMENT, NAME, STRING, TEXT;
     }
 }
